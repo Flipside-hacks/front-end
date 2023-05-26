@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        font-family: 'Space Grotesk', sans-serif;
+    }
+}
+
+.long-btn {
+    @apply bg-[#89D472] hover:bg-[#71b15d] text-white rounded-sm focus:outline-none trans font-semibold
+}
+.long-btn-trans {
+    @apply border border-[#89D472] hover:border-[#71b15d] text-[#71b15d] bg-transparent rounded-lg focus:outline-none trans
+}
+.btn-black {
+    @apply bg-[#000000] hover:bg-[#292727] text-white rounded focus:outline-none trans
+}
+
+.trans {
+    @apply transition-all duration-300 ease-in-out;
+}
+.text-lime {
+    @apply text-[#89D472];
+}
+.bg-lime {
+    @apply bg-[#89D472];
+}
+
+.hero{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0px;
+    top: 81px;
+    background-image: url('/bg.png');
+
+}
+.bfpe{
+    background: #89D472;
+}
+.startC {
+    
+Font-size: 48px;
+color:  #89D472;
+padding-top: 78px;
+padding-left: 79px
+}
+
+.position-indicator {
+    border-bottom: 4px solid #83d46a;
+    width: 50px;
+    margin-top: 6px;
+    margin-left: 120px;
+  }
