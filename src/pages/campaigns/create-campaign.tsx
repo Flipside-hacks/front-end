@@ -6,6 +6,8 @@ import { ADDRESSES } from "@/constants/addresses";
 import { ABI } from "@/constants/abi";
 import { useContractWrite, useNetwork } from "wagmi";
 import { prepareWriteContract, writeContract } from "@wagmi/core";
+import { ethers } from "ethers";
+import { useConnectorContext } from "@/contexts/connector";
 
 // Construct with token and endpoint
 const client = new Web3Storage({
@@ -103,6 +105,9 @@ const CreateCampaign = () => {
         abi: ABI.campaignFactory,
         functionName: "createCampaign",
         args: [objHash, _target, satelliteAddr],
+        overrides:{
+          gasLimit: ethers.utils.parseUnits(`${120000}`,0),
+        },
       });
       const data = await writeContract(configure);
      
@@ -112,6 +117,7 @@ const CreateCampaign = () => {
       toast.success('Campaign Successfully created!')
       setInTxn(false)
     } catch (error) {
+      console.log(error)
       setInTxn(false)
       toast.error('Something Went wrong')
       console.log(error);

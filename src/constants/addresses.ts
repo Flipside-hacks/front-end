@@ -1,4 +1,6 @@
-export const ADDRESSES = {
+import {selected_network_addresses} from "../interfaces/base"
+
+export const ADDRESSES:selected_network_addresses = {
   //Bsc Testnet(HUB CHAIN)
   97: {
     CAMPAIGN_FACTORY: "0xe8d3a73f6351f9f5dd6A577aD4ddF7d5C84DF5C8",

@@ -8,6 +8,7 @@ import { ABI } from "@/constants/abi";
 import { toast } from "react-hot-toast";
 import { prepareWriteContract, writeContract } from "@wagmi/core";
 import { ethers } from "ethers";
+import useConnector from '../../utils/Connector';
 
 interface Props {
   isOpen: boolean;
