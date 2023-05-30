@@ -7,7 +7,7 @@ import { ABI } from "@/constants/abi";
 
 const RecentCampaigns = () => {
       const { data, isError, isLoading } = useContractRead({
-        address: "0xb4439634ad988555F2a5EB3810ae589A353A2B77",
+        address: "0x5d99c3F30597759d26974b1A6b65510df300c3DD",
         abi: ABI.campaignFactory,
         functionName: "getAllCampaigns",
       });

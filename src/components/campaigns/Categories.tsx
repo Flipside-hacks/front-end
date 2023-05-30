@@ -1,9 +1,13 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ThreeAnysImg } from "../../../public";
 import CampaignCard from "./CampaignCard";
-import { useContractRead } from "wagmi";
+import { useContractRead, useNetwork } from "wagmi";
 import { ABI } from "@/constants/abi";
+import { BSCTEST, AVAXTEST, MUMBAI, FANTOMTEST } from '../EVM/ChainConfigs';
+import _ from 'lodash';
+import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
+import { ChainConfig } from "../EVM/ChainConfigs/types";
 
 const campaigns = [
   {
@@ -31,14 +35,50 @@ const campaigns = [
 
 
 const Categories = () => {
+  const { chain } = useNetwork();
+
+  const [AllCampaigns, setAllCampaigns] = useState<string[]>([]);
+  const [activeCategory, setActiveCategory] = useState("All");
+  const ChainConfigs = [ BSCTEST, AVAXTEST, MUMBAI, FANTOMTEST ]
+
+  const crossChainList = async (fromChainId: number) => {
+    const fromChain = _.find(ChainConfigs, {"id": Number(fromChainId)});
+    const toChain = _.find(ChainConfigs, {"id": 80001});
+
+    const api = new AxelarQueryAPI({ environment: Environment.TESTNET });
+
+
+    if (!fromChain) {
+      console.log('Chain not supported');
+      return;
+    }
+
+    if (!toChain) {
+        console.log('Destination chain not supported');
+        return;
+    }
+
+    // Calculate how much gas to pay to Axelar to execute the transaction at the destination chain
+    const gasFee = await api.estimateGasFee(
+        fromChain.evmChain!,
+        toChain.evmChain!,
+        fromChain.gasToken!,
+        1000000,
+        2
+    );
+
+    
+    console.log(`gasFee: ${gasFee}`);
+
+    setAllCampaigns([])
+  }
+
   const { data, isError, isLoading } = useContractRead({
-    address: "0xb4439634ad988555F2a5EB3810ae589A353A2B77",
+    address: "0x5d99c3F30597759d26974b1A6b65510df300c3DD",
     abi: ABI.campaignFactory,
     functionName: "getAllCampaigns",
   });
   console.log("All campaigns: ", data);
-  const [AllCampaigns, setAllCampaigns] = useState<string[]>(data as unknown as string[]);
-  const [activeCategory, setActiveCategory] = useState("All");
 
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
@@ -54,6 +94,18 @@ const Categories = () => {
 
   const categories = ["All", "Blockchain", "Education", "Health"];
 
+  useEffect(() => {
+    if(!chain){
+      console.log("Chain is undefined");
+      return;
+    }
+
+    if(chain.id !== 80001){
+      // make crosschain transaction
+      crossChainList(chain.id)
+  
+    }
+  }, [chain]);
   return (
     <div className="w-full pt-12 pb-20 overflow-x-scroll">
       <div className="w-full flex items-center justify-between">

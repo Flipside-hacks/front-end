@@ -3,11 +3,14 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import Input from "@/components/common/Input";
-import { useContractRead } from "wagmi";
+import { useContractRead, useNetwork } from "wagmi";
 import { ABI } from "@/constants/abi";
 import { toast } from "react-hot-toast";
 import { prepareWriteContract, writeContract } from "@wagmi/core";
 import { ethers } from "ethers";
+import _ from 'lodash';
+import { BSCTEST, AVAXTEST, MUMBAI, FANTOMTEST } from '../EVM/ChainConfigs';
+import { AxelarQueryAPI, Environment, EvmChain, GasToken } from '@axelar-network/axelarjs-sdk';
 import useConnector from '../../utils/Connector';
 
 interface Props {
@@ -17,6 +20,7 @@ interface Props {
 }
 
 const ContributeModal = ({ isOpen, closeModal, campaign }: Props) => {
+  const { chain } = useNetwork();
   const [amount, setAmount] = React.useState("");
   const [memo, setMemo] = React.useState("");
 
@@ -24,23 +28,60 @@ const ContributeModal = ({ isOpen, closeModal, campaign }: Props) => {
     e.preventDefault();
     if (!amount || !memo) return toast.error("Please fill all fields");
     try {
-      const configure = await prepareWriteContract({
-        address: campaign as `0x${string}`,
-        abi: ABI.campaign,
-        functionName: "donate",
-        args: [memo],
-        overrides: {
-          value: ethers.utils.parseEther(amount),
-          // gasLimit: 
-        },
-      });
-      const data = await writeContract({
-        ...configure,
+      if(chain?.id !== 80001){
+        // make crosschain transaction
+        
+        const ChainConfigs = [ BSCTEST, AVAXTEST, MUMBAI, FANTOMTEST ]
+        const fromChain = _.find(ChainConfigs, {"id": Number(chain?.id)});
+        const toChain = _.find(ChainConfigs, {"id": 80001});
 
-      });
-      console.log(data);
-      closeModal();
-      toast.success(`Thank you for your contribution. View on explorer: https://testnet.bscscan.com/tx/${data.hash}`);
+        if (!fromChain) {
+          toast.error('Chain not supported');
+          return;
+        }
+
+        if (!toChain) {
+            toast.error('Destination chain not supported');
+            return;
+        }
+
+        const api = new AxelarQueryAPI({ environment: Environment.TESTNET });
+        // Calculate how much gas to pay to Axelar to execute the transaction at the destination chain
+        const gasFee = await api.estimateGasFee(
+          fromChain.evmChain!,
+          toChain.evmChain!,
+          fromChain.gasToken!,
+          1000000,
+          2
+        );
+
+        console.log(`gasFee: ${gasFee}`);
+        console.log(`amount: ${amount}`);
+        console.log(ethers.utils.parseUnits(amount.toString(), 6));
+        console.log(`memo: ${memo}`);
+        
+        console.log('diff chains')
+
+      } else {
+        console.log('equal chains')
+        /* const configure = await prepareWriteContract({
+          address: campaign as `0x${string}`,
+          abi: ABI.campaign,
+          functionName: "donate",
+          args: [memo],
+          overrides: {
+            value: ethers.utils.parseEther(amount),
+            // gasLimit: 
+          },
+        });
+        const data = await writeContract({
+          ...configure,
+
+        });
+        console.log(data); */
+        closeModal();
+        toast.success(`Thank you for your contribution. View on explorer: https://testnet.bscscan.com/tx/${data.hash}`);
+      }
     } catch (error: any) {
       console.log(error);
       toast.error(error);
