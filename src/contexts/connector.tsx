@@ -36,10 +36,17 @@ export const ConnectContextProvider = ({children}:any)=>{
         }
         
     },[network?.chain?.id])
+
+    network.chain?.id
     
-   return( <ConnectContext.Provider value={{connector,network_switcher:switcher.switchNetwork!,supportedChains:network.chains}} >
+   return (
+     <ConnectContext.Provider 
+      value={{connector,network_switcher:switcher.switchNetwork!,supportedChains:network.chains,currentChain:network?.chain?.id}}
+     >
     {children}
-    </ConnectContext.Provider>)
+    </ConnectContext.Provider>
+    )
 }
 
-export const useConnectorContext = ()=> useContext(ConnectContext);
+export const useConnectorContext = ()=> useContext(ConnectContext) as Connector;
+

@@ -4,13 +4,19 @@ import { ThreeAnysImg } from "../../../public";
 import CampaignCard from "./CampaignCard";
 import { useContractRead } from "wagmi";
 import { ABI } from "@/constants/abi";
+import { useConnectorContext } from "@/contexts/connector";
 
 const RecentCampaigns = () => {
+  const {connector} = useConnectorContext();
       const { data, isError, isLoading } = useContractRead({
         address: "0xb4439634ad988555F2a5EB3810ae589A353A2B77",
-        abi: ABI.campaignFactory,
+        // address: connector?.address_campaign_factory as `0x${string}`,
+        abi: connector?.abi_campaign_factory,
         functionName: "getAllCampaigns",
-      });
+        onSuccess:(data:string[])=>{
+          // setAllCampaigns(data);
+          console.log("getAllCampaigns", data,connector?.address_campaign_factory);
+        }});
       console.log("All campaigns: ", data);
       const [AllCampaigns, setAllCampaigns] = useState<string[]>(
         data as unknown as string[]

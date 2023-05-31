@@ -1,13 +1,17 @@
 import Layout from "@/components/common/Layout";
-import { useEffect, useState } from "react";
+import { useEffect, useState,useCallback ,CSSProperties} from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { useRouter } from "next/router";
+import { TypeAnimation } from 'react-type-animation';
 import { Web3Storage } from "web3.storage";
-import { ADDRESSES } from "@/constants/addresses";
-import { ABI } from "@/constants/abi";
-import { useContractWrite, useNetwork } from "wagmi";
-import { prepareWriteContract, writeContract } from "@wagmi/core";
+import {CAMPAIGN_SATELLITE } from "@/constants/addresses";
+import { useContractWrite, useNetwork,usePrepareContractWrite,useWaitForTransaction } from "wagmi";
 import { ethers } from "ethers";
 import { useConnectorContext } from "@/contexts/connector";
+import HashLoader from "react-spinners/HashLoader";
+import MoonLoader from "react-spinners/MoonLoader";
+import Loader from "@/components/modals/loaderModal";
+
 
 // Construct with token and endpoint
 const client = new Web3Storage({
@@ -16,24 +20,21 @@ const client = new Web3Storage({
 });
 
 const CreateCampaign = () => {
-  const { chain } = useNetwork();
-  const [chainId, setChainId] = useState<
-    97 | 80001 | 43113 | (() => 97 | 80001 | 43113)
-  >(97);
+  const router = useRouter();
+  const {connector,network_switcher,supportedChains,currentChain} = useConnectorContext();
+   
+  //validate that chain is connected to hub
+  //from design hub chain has no satellite contract so we need to check for boolean on the satellite contract value
 
+  const isHubChain  = !Boolean(connector?.address_campaign_satellite);
+
+  //switch to hub chain if not connected to hub chain // assumming that the first connected chain is the hub chain
   useEffect(() => {
-    if (chain) {
-      setChainId(chain.id as 97 | 80001 | 43113);
+    if (!isHubChain) {
+      network_switcher(supportedChains[0].id);
     }
-  }, [chain]);
-
-  const { data, isLoading, isSuccess, writeAsync } = useContractWrite({
-    mode: "recklesslyUnprepared",
-    address: ADDRESSES[chainId as keyof typeof ADDRESSES]
-      .CAMPAIGN_FACTORY as `0x${string}`,
-    abi: ABI.campaignFactory,
-  });
-
+  }, [currentChain]);
+  
   const [tab1, setTab1] = useState<boolean>(true);
   const [tab2, setTab2] = useState<boolean>(false);
   const [name, setName] = useState("");
@@ -44,6 +45,26 @@ const CreateCampaign = () => {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [inTxn, setInTxn] = useState(false);
+  const [campaignHash, setCampaignHash] = useState<string>("");
+  const [campaignTarget, setCampaignTarget] = useState<number>(0);
+  const [approved,setApproved] = useState(false);
+  const [disableBtn, setDisableBtn] = useState<boolean>(false);
+  const [percentageCount1,setPercentageCount1] = useState<number>(0);
+  const [percentageCount2,setPercentageCount2] = useState<number>(0);
+  const [percentageCount3,setPercentageCount3] = useState<number>(0);
+  const [percentageCount4,setPercentageCount4] = useState<number>(0);
+  const [txMessage, setTxMessage] = useState<string>("");
+  const [tx1, setTx1] = useState<boolean>(false);
+  const [tx2, setTx2] = useState<boolean>(false);
+  const [tx3, setTx3] = useState<boolean>(false);
+  const [tx4, setTx4] = useState<boolean>(false);
+  const [open,setOpen] =useState<boolean>(false);
+
+  const transactionMessage:string[] = [
+      "Uploading campaign details...",
+      "Submitting campaign data...",
+      "Creating campaign...",
+      "Campaign created successfully!"];
 
   const handleCoverImageChange = (e: any) => {
     setCoverImage(e.target.files[0]);
@@ -61,19 +82,22 @@ const CreateCampaign = () => {
     }
   };
 
-  const CreateCampaign = async (e: any) => {
+  const ProcessCampaign = useCallback( async (e: any) => {
     e.preventDefault();
     if (!name || !campaignName || !link || !projectDetails || !coverImage) {
       toast.error("Please fill out all the fields");
       return;
     }
     try {
-      
-      setInTxn(true)
+      setTx1(true)
+      setInTxn(true);
+      setOpen(true);
+      setDisableBtn(true);
+      setTxMessage(transactionMessage[0]);
       const imgHash = await client.put([coverImage], {
         wrapWithDirectory: false,
       });
-      console.log("Image hash: ", imgHash);
+      // console.log("Image hash: ", imgHash);
       //creating object containing all the data
       const obj = {
         name,
@@ -82,7 +106,7 @@ const CreateCampaign = () => {
         projectDetails,
         coverImage: imgHash,
       };
-      console.log("Obj: ", obj);
+      // console.log("Obj: ", obj);
       //converting object to a blob
       const blob = new Blob([JSON.stringify(obj)], {
         type: "application/json",
@@ -91,42 +115,176 @@ const CreateCampaign = () => {
       const file = [new File([blob], "obj.json")];
       //uploading file to ipfs
       const objHash = await client.put(file);
-      console.log("Obj hash: ", objHash);
-
-      const satelliteAddr = '0x47A62Af19657263E3E0b60312f97F7464F70Ba35';
-
-      console.log( `SATE: `,satelliteAddr)
 
       const _target = Number(target);
-      console.log(objHash, _target, satelliteAddr)
 
-      const configure = await prepareWriteContract({
-        address: "0xb4439634ad988555F2a5EB3810ae589A353A2B77",
-        abi: ABI.campaignFactory,
-        functionName: "createCampaign",
-        args: [objHash, _target, satelliteAddr],
-        overrides:{
-          gasLimit: ethers.utils.parseUnits(`${120000}`,0),
-        },
-      });
-      const data = await writeContract(configure);
-     
-
-
-      const tx = await data.wait();
-      toast.success('Campaign Successfully created!')
-      setInTxn(false)
+      setCampaignHash(objHash);
+      setCampaignTarget(Number(target));
+      return {objHash, _target}
     } catch (error) {
       console.log(error)
       setInTxn(false)
       toast.error('Something Went wrong')
       console.log(error);
     }
+
+
+   
+  },[name,campaignName,link,projectDetails,coverImage]);
+
+
+
+  const { config } = usePrepareContractWrite({
+    address: connector?.address_campaign_factory as `0x${string}`,
+    abi: connector?.abi_campaign_factory,
+    functionName: "createCampaign",
+    args: [
+      campaignHash,
+      campaignTarget,
+      CAMPAIGN_SATELLITE
+    ],
+    chainId: currentChain,
+
+    enabled:
+      Boolean(campaignHash) &&
+      Boolean(campaignTarget) &&
+      Boolean(CAMPAIGN_SATELLITE)
+    ,
+    overrides: {
+      gasLimit: ethers.utils.parseUnits(`${350000}`, 0),
+    },
+    onSettled(data, error) {
+      if (data) {
+        console.log(
+          "USE PREPARE CREATE CONTRACT IS SETTLED SUCCESSFULLY",
+          data
+        );
+        setTx1(false);
+        setTx2(true)
+        setInTxn(false);
+        setApproved(true);
+        setTxMessage(transactionMessage[1]);
+      }
+      if (error) {
+        console.log(
+          "USE PREPARE CREATE CONTRACT IS SETTLED WITH ERRORS",
+       error);
+      }
+    },
+  });
+
+
+
+  //write to contract create campaign
+  const { data:campaignData, isLoading:campaignDataIsLoading, isSuccess:campaignDataIsSucess, write:campaignDataWrite} = useContractWrite({...config,
+      onSuccess:()=>{
+        // toast.success('Campaign Request Successfully submitted!')
+        //reset the campaign fields
+        setApproved(false);
+        setDisableBtn(false)
+        setTx2(false);
+        setTx3(true);
+        setTxMessage(transactionMessage[2]);
+
+      },
+      onError:(e)=>{
+        toast.error('Campaign creation failed!  '+ e.cause);
+      },   
+  })
+
+  //wait for campaign to be created
+  const { data:dataCampaignTxn, isError:dataCampaignTxnErr, isLoading:dataCampaignTxnLoading,error:dataCampaignError,isSuccess:dataCampaignTxnSuccess } = useWaitForTransaction({
+    hash: campaignData?.hash, onSuccess:()=>{
+      setTx3(false)
+      setTx4(true);
+      setTxMessage(transactionMessage[3]);
+      setTimeout(() => {
+        setOpen(false);
+      }, 2000);
+        // setName("");
+        // setCampaignName("");
+        // setCampaignTarget(0);
+        // setCoverImage(null);
+
+        // //navigate to campaigns
+        // router.push("/campaigns");
+      
+    }
+  })
+  useEffect(()=>{
+    if(dataCampaignTxnLoading){
+      toast.success("Creating Campaign processing.. ")
+    }
+      //show success message on campaign creation success
+    if(dataCampaignTxnSuccess){
+      toast.success("Creating Campaign success: ✔️"+ dataCampaignTxn?.status);
+      }
+    //show error message on campaign creation error
+    if(dataCampaignTxnErr){
+      toast.error("Creating Campaign Failed: "+ dataCampaignError?.message);
+      setOpen(false);
+      }
+    if(campaignDataIsSucess) {
+      console.log("hash: " + JSON.stringify(campaignData))
+    }
+
+  },[dataCampaignTxnLoading,dataCampaignTxnSuccess,dataCampaignTxnErr,campaignDataIsSucess])
+
+
+ 
+
+  useEffect(()=>{
+    if(approved) {
+      campaignDataWrite!();
+    }
+  },[approved]);
+
+
+    
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if(tx1) {
+        setPercentageCount1((prev)=> prev < 98?prev + 1:prev==98 && tx1?98: 100 )
+      }
+      if(tx2) {
+        setPercentageCount2((prev)=> prev < 98?prev + 1:prev==98 && tx1?98: 100 )
+      }
+      if(tx3) {
+        setPercentageCount3((prev)=> prev < 98?prev + 1:prev==98 && tx1?98: 100 )
+      }
+      if(tx4) {
+        setPercentageCount4((prev)=> prev < 98?prev + 1:prev==98 && tx1?98: 100 )
+      }
+    }, 80);
+    return () => clearInterval(interval);
+  }, [tx1,tx2,tx3,tx4]);
+
+  const override: CSSProperties = {
+    display: "block",
+    margin: "0 auto",
+    borderColor: "black",
   };
+
 
   return (
     <>
-      <Layout>
+    {
+      open &&   <Loader setOpen={setOpen}> 
+      <div className="percentage text-white font-sans text-2xl absolute grid place-content-center h-full w-full -top-4">
+        <span>{tx1?percentageCount1:tx2?percentageCount2:tx3?percentageCount3:tx4?percentageCount4:0}%</span>
+      </div>
+      <MoonLoader  color={'#FFC0CB'}
+        loading={true}
+        cssOverride={override}
+        size={90}
+        aria-label="Loading Spinner"
+        data-testid="loader"  />
+         <div className="status animate-pulse">
+            {tx1?txMessage:tx2?txMessage:tx3?txMessage:tx4?txMessage:"Completed."}
+         </div>
+      </Loader> 
+    }
+      <Layout> 
         <div>
           <Toaster />
           <div>
@@ -149,9 +307,11 @@ const CreateCampaign = () => {
           </div> */}
 
           {/* add radio button & line to next tab */}
+      
 
           {tab1 && (
             <form className="shadow-md rounded px-8 pt-6 pb-8 mb-4 mt-4 ml-11">
+              
               <div className="mb-7">
                 <label className="block text-white font-bold mb-2">Name</label>
                 <input
@@ -239,16 +399,27 @@ const CreateCampaign = () => {
 
               <div className=" justify-center">
                 <button
-                  onClick={CreateCampaign}
-                  className="bfpe hover:bg-green-700 w-4/12 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                  disabled={disableBtn}
+                  onClick={ProcessCampaign}
+                  className={`w-4/12 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${disableBtn?"bg-gray-500 hover:bg-gray-400":"bfpe hover:bg-green-700"}`}
                   type="button"
                 >
-                 {inTxn ? 'Processing': 'publish'}
+                 {inTxn ? "processing... ": approved?<HashLoader
+        color={'#FFC0CB'}
+        loading={approved}
+        cssOverride={override}
+        size={30}
+        aria-label="Loading Spinner"
+        data-testid="loader1"  />: 'publish'}
                 </button>
               </div>
             </form>
           )}
+
+
         </div>
+
+
       </Layout>
     </>
   );

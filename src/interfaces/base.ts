@@ -2,10 +2,10 @@ import { Chain } from "wagmi";
 export interface IConnector{
     readonly chainID: number;
     readonly network: string;
-    readonly adddress_campaign_factory: string;
-    readonly adddress_crosschain_dao: string;
-    readonly adddress_campaign_satellite: string;
-    readonly adddress_governance_token: string;
+    readonly address_campaign_factory: string;
+    readonly address_crosschain_dao: string;
+    readonly address_campaign_satellite: string;
+    readonly address_governance_token: string;
     readonly abi_token: any; 
     readonly abi_campaign: any;
     readonly abi_campaign_factory: any;
@@ -31,5 +31,6 @@ export interface abiList{
 export interface Connector{
   readonly connector: IConnector | null;
   network_switcher:Function;
-  readonly supportedChains: Chain[]
+  readonly supportedChains: Chain[];
+  currentChain:number|undefined;
 }
