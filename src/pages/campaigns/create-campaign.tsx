@@ -288,7 +288,7 @@ const CreateCampaign = () => {
         <div>
           <Toaster />
           <div>
-            <h1 className="font-bold">Start a Campaign</h1>
+            <h1 className="font-bold startC">Start a Campaign</h1>
           </div>
 
           <h2 className="text-xl text-[#89D472] pl-20 pt-5">
@@ -387,7 +387,7 @@ const CreateCampaign = () => {
 
               <div className="mb-7 relative ">
                 <label className="block text-white font-bold mb-2">
-                  Cover Image
+                  Cover Imagr
                 </label>
 
                 <input
