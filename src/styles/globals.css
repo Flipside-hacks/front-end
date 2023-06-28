@@ -48,6 +48,12 @@ color:  #89D472;
 padding-top: 78px;
 padding-left: 79px
 }
+.text-center {
+    align-items: center;
+    border-radius: 12px;
+    
+    
+}
 
 .position-indicator {
     border-bottom: 4px solid #83d46a;
