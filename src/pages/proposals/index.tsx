@@ -101,6 +101,8 @@ const Proposals = () => {
           Proposals are suggestions submitted by members of DAOvation. You can
           vote for, against or abstain.
         </p>
+        <Link href="/proposals/create-proposal"> <button className="long-btn p-2 text-center"> Create Proposal</button> </Link>
+
 
         <div className="flex overflow-x-scroll mt-4 py-8">
           {state.map((category, index) => (
